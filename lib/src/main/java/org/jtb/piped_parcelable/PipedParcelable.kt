@@ -12,24 +12,22 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 
 /**
- * A Parcelable wrapper that uses pipes to transfer large amounts of data between processes.
+ * A [Parcelable] wrapper that uses pipes to marshal and unmarshal parcel data.
  */
-class PipedParcelable<V: Parcelable> : Parcelable {
+class PipedParcelable<V : Parcelable> : Parcelable {
   internal companion object {
     private const val BUFFER_SIZE = 16 * 1024
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
     @JvmField
-    @Suppress("UNCHECKED_CAST")
-    val CREATOR: Parcelable.Creator<PipedParcelable<out Parcelable>> =
-        object : Parcelable.Creator<PipedParcelable<out Parcelable>> {
-          override fun createFromParcel(parcel: Parcel) =
-              PipedParcelable<Parcelable>(parcel)
+    val CREATOR = object : Parcelable.Creator<PipedParcelable<out Parcelable>> {
+      override fun createFromParcel(parcel: Parcel) =
+          PipedParcelable<Parcelable>(parcel)
 
-          override fun newArray(size: Int) =
-              arrayOfNulls<PipedParcelable<out Parcelable>>(size)
-        }
+      override fun newArray(size: Int) =
+          arrayOfNulls<PipedParcelable<out Parcelable>>(size)
+    }
   }
 
   private var _value: V? = null
@@ -104,14 +102,14 @@ class PipedParcelable<V: Parcelable> : Parcelable {
   }
 
   @Suppress("UNCHECKED_CAST")
-  private fun <T : Parcelable> unmarshall(bytes: ByteArray?): T? {
+  private fun unmarshall(bytes: ByteArray?): V? {
     if (bytes == null) return null
 
     val parcel = Parcel.obtain()
     try {
       parcel.unmarshall(bytes, 0, bytes.size)
       parcel.setDataPosition(0)
-      return parcel.readValue(PipedParcelable::class.java.classLoader) as? T
+      return parcel.readValue(PipedParcelable::class.java.classLoader) as? V
     } finally {
       parcel.recycle()
     }
